@@ -241,8 +241,6 @@ public class VideoResampler {
     }
 
     private MediaExtractor setupExtractorForClip(SamplerClip clip ) {
-
-
         MediaExtractor extractor = new MediaExtractor();
         try {
             extractor.setDataSource( clip.getUri().toString() );

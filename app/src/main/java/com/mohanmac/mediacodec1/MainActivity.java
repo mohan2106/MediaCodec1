@@ -59,8 +59,12 @@ public class MainActivity extends AppCompatActivity {
         // Make sure the app has correct permissions to run
         requestPermissionsIfNecessary();
 
+        File file = FileUtils.createFileDir(this,"output");
+        String outputUri = file.getAbsolutePath() + "/mohan_input_muxer.mp4";
+        EncoderMuxer encoderMuxer = new EncoderMuxer();
+        encoderMuxer.testEncodeVideoToMp4(outputUri);
         // Create request to get image from filesystem when button clicked
-        selectVideoBtn.setOnClickListener(view -> {
+        /*selectVideoBtn.setOnClickListener(view -> {
             Intent intent = new Intent();
             intent.setType("video/avc");
 
@@ -72,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivityForResult(chooseIntent, REQUEST_CODE_VIDEO);
             }
 //            startActivityForResult(chooseIntent, REQUEST_CODE_VIDEO);
-        });
+        });*/
     }
 
     @Override

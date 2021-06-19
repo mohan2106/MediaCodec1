@@ -3,6 +3,7 @@ package com.mohanmac.mediacodec1;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
+import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.opengl.GLES20;
 import android.util.Log;
@@ -194,9 +195,15 @@ public class Compressor {
         boolean decoderConfigured = false;
         OutputSurface outputSurface = null;
 
-        File file = new File(inputFilePath);
+        //=======================EXTRACTOR
         byte[] fileData;
         try {
+            MediaExtractor extractor = new MediaExtractor();
+            extractor.setDataSource(inputFilePath);
+            //selecting video track
+            extractor.selectTrack(getVideoTrackIndex(extractor));
+
+            File file = new File(inputFilePath);
             fileData = readContentIntoByteArray(file);
             // The size of a frame of video data, in the formats we handle, is stride*sliceHeight
             // for Y, and (stride/2)*(sliceHeight/2) for each of the Cb and Cr channels.  Application
@@ -466,6 +473,22 @@ public class Compressor {
         fileInputStream.close();
 
         return bFile;
+    }
+
+    private int getVideoTrackIndex(MediaExtractor extractor) {
+
+        for ( int trackIndex = 0; trackIndex < extractor.getTrackCount(); trackIndex++ ) {
+            MediaFormat format = extractor.getTrackFormat( trackIndex );
+
+            String mime = format.getString( MediaFormat.KEY_MIME );
+            if ( mime != null ) {
+                if ( mime.equals( "video/avc" ) ) {
+                    return trackIndex;
+                }
+            }
+        }
+
+        return -1;
     }
 
     private void generateFrame(int frameIndex, int colorFormat, byte[] frameData) {
