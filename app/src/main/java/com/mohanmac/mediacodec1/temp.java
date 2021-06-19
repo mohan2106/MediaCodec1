@@ -170,27 +170,7 @@ public class temp {
         Log.d(TAG, "[fillInputBuffer] Buffer load start");
 
         ByteBuffer[] inputBuffers = mEncoder.getInputBuffers();
-        ByteBuffer[] encoderOutputBuffers = mEncoder.getOutputBuffers();
 
-        ByteBuffer[] decoderInputBuffers = null;
-        ByteBuffer[] decoderOutputBuffers = null;
-        MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-        MediaFormat decoderOutputFormat = null;
-        int generateIndex = 0;
-        int checkIndex = 0;
-        int badFrames = 0;
-        boolean decoderConfigured = false;
-        try {
-            outputStream = new FileOutputStream(outputFilePat);
-            Log.d(TAG, "encoded output will be saved as " + outputFilePat);
-        } catch (FileNotFoundException e) {
-            Log.w(TAG, "Unable to create debug output file " + outputFilePat);
-            e.printStackTrace();
-        }
-
-        // Loop until the output side is done.
-        boolean encoderDone = false;
-        boolean outputDone = false;
 
         while (!inputDone) {
 
@@ -211,7 +191,6 @@ public class temp {
                     int pos = frameIndex * limit;
                     byte[] subData = new byte[limit];
                     System.arraycopy(data, pos, subData, 0, limit);
-
                     inputBuffer.clear();
                     inputBuffer.put(subData);
 

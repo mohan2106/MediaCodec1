@@ -200,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
 
         Compressor compressor = Compressor.getInstance();
         try {
-            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(outputUri);
+            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
         } catch (Exception e) {
             e.printStackTrace();
             Log.d("Mohan",e.getMessage());
