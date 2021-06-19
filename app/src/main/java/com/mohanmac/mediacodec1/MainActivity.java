@@ -59,12 +59,12 @@ public class MainActivity extends AppCompatActivity {
         // Make sure the app has correct permissions to run
         requestPermissionsIfNecessary();
 
-        File file = FileUtils.createFileDir(this,"output");
-        String outputUri = file.getAbsolutePath() + "/mohan_input_muxer2.mp4";
-        EncoderMuxer encoderMuxer = new EncoderMuxer();
-        encoderMuxer.testEncodeVideoToMp4(outputUri);
+//        File file = FileUtils.createFileDir(this,"output");
+//        String outputUri = file.getAbsolutePath() + "/mohan_input_muxer2.mp4";
+//        EncoderMuxer encoderMuxer = new EncoderMuxer();
+//        encoderMuxer.testEncodeVideoToMp4(outputUri);
         // Create request to get image from filesystem when button clicked
-        /*selectVideoBtn.setOnClickListener(view -> {
+        selectVideoBtn.setOnClickListener(view -> {
             Intent intent = new Intent();
             intent.setType("video/avc");
 
@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivityForResult(chooseIntent, REQUEST_CODE_VIDEO);
             }
 //            startActivityForResult(chooseIntent, REQUEST_CODE_VIDEO);
-        });*/
+        });
     }
 
     @Override
@@ -180,35 +180,35 @@ public class MainActivity extends AppCompatActivity {
 
     private void MediaInfo(String filepath,Uri uri){
 
-//        VideoResampler resampler = new VideoResampler();
-//        resampler.setInput(uri);
-//
-//        SamplerClip clip = new SamplerClip(uri);
-//        resampler.addSamplerClip(clip);
-        File file = FileUtils.createFileDir(this,"output");
-        String outputUri = file.getAbsolutePath() + "/mohan.mp4";
-//        resampler.setOutput(outputUri);
-//        int width = Resolution.RESOLUTION_360P.getWidth();
-//        int height = Resolution.RESOLUTION_360P.getHeight();
-//        resampler.setOutputResolution(width,height);
-//        int bitrate = MediaHelper.GetBitRate(uri);
-//        resampler.setOutputBitRate(bitrate/2);
-//        int frameRate = MediaHelper.GetFrameRate(uri);
-//        resampler.setOutputFrameRate(frameRate);
-//        resampler.setOutputIFrameInterval(5);
-//        try {
-//            resampler.start();
-//        } catch (Throwable throwable) {
-//            throwable.printStackTrace();
-//        }
+        VideoResampler resampler = new VideoResampler();
+        resampler.setInput(uri);
 
-        Compressor compressor = Compressor.getInstance();
+        SamplerClip clip = new SamplerClip(uri);
+        resampler.addSamplerClip(clip);
+        File file = FileUtils.createFileDir(this,"output");
+        Uri outputUri = Uri.parse(file.getAbsolutePath() + "/mohan.mp4");
+        resampler.setOutput(outputUri);
+        int width = Resolution.RESOLUTION_360P.getWidth();
+        int height = Resolution.RESOLUTION_360P.getHeight();
+        resampler.setOutputResolution(width,height);
+        int bitrate = MediaHelper.GetBitRate(uri);
+        resampler.setOutputBitRate(bitrate/2);
+        int frameRate = MediaHelper.GetFrameRate(uri);
+        resampler.setOutputFrameRate(frameRate);
+        resampler.setOutputIFrameInterval(5);
         try {
-            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
-        } catch (Exception e) {
-            e.printStackTrace();
-            Log.d("Mohan",e.getMessage());
+            resampler.start();
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
         }
+
+//        Compressor compressor = Compressor.getInstance();
+//        try {
+//            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            Log.d("Mohan",e.getMessage());
+//        }
         /*MediaExtractor extractor = new MediaExtractor();
         File file = new File(filepath);
 

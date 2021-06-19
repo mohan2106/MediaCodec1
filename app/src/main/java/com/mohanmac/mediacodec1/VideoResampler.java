@@ -1,5 +1,7 @@
 package com.mohanmac.mediacodec1;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -299,6 +301,7 @@ public class VideoResampler {
             endTime = clip.getVideoDuration();
         }
 
+
         boolean outputDoneNextTimeWeCheck = false;
 
         boolean outputDone = false;
@@ -323,6 +326,19 @@ public class VideoResampler {
                         // the BUFFER_FLAG_CODEC_CONFIG flag set.
                         ByteBuffer inputBuf = decoderInputBuffers[inputBufIndex];
                         inputBuf.clear();
+
+//                        int limit = inputBuf.capacity();
+//                        limit = Math.min(limit,
+//                                fileData.length - totalDataRead);
+//
+//                        totalDataRead += limit;
+//                        int pos = generateIndex * limit;
+//                        byte[] subData = new byte[limit];
+//                        System.arraycopy(fileData, pos, subData, 0, limit);
+//                        inputBuf.clear();
+//                        inputBuf.put(subData);
+//                        encoder.queueInputBuffer(inputBufIndex, 0, limit, ptsUsec, 0);
+//                        if (VERBOSE) Log.d(TAG, "submitted frame " + inputChunk + " to enc");
 
                         int sampleSize = extractor.readSampleData( inputBuf, 0 );
                         if ( sampleSize < 0 ) {
@@ -465,8 +481,23 @@ public class VideoResampler {
                 }
             }
         }
+
+
         if ( inputChunk != outputCount ) {
             // throw new RuntimeException( "frame lost: " + inputChunk + " in, " + outputCount + " out" );
         }
+    }
+
+    private byte[] readContentIntoByteArray(File file) throws Exception
+    {
+        FileInputStream fileInputStream = null;
+        byte[] bFile = new byte[(int) file.length()];
+
+        //convert file into array of bytes
+        fileInputStream = new FileInputStream(file);
+        fileInputStream.read(bFile);
+        fileInputStream.close();
+
+        return bFile;
     }
 }
