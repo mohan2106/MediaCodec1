@@ -176,26 +176,34 @@ public class MainActivity extends AppCompatActivity {
 
     private void MediaInfo(String filepath,Uri uri){
 
-        VideoResampler resampler = new VideoResampler();
-        resampler.setInput(uri);
-
-        SamplerClip clip = new SamplerClip(uri);
-        resampler.addSamplerClip(clip);
+//        VideoResampler resampler = new VideoResampler();
+//        resampler.setInput(uri);
+//
+//        SamplerClip clip = new SamplerClip(uri);
+//        resampler.addSamplerClip(clip);
         File file = FileUtils.createFileDir(this,"output");
-        Uri outputUri = Uri.parse(file.getAbsolutePath() + "/mohan.mp4");
-        resampler.setOutput(outputUri);
-        int width = Resolution.RESOLUTION_360P.getWidth();
-        int height = Resolution.RESOLUTION_360P.getHeight();
-        resampler.setOutputResolution(width,height);
-        int bitrate = MediaHelper.GetBitRate(uri);
-        resampler.setOutputBitRate(bitrate/2);
-        int frameRate = MediaHelper.GetFrameRate(uri);
-        resampler.setOutputFrameRate(frameRate);
-        resampler.setOutputIFrameInterval(5);
+        String outputUri = file.getAbsolutePath() + "/mohan.mp4";
+//        resampler.setOutput(outputUri);
+//        int width = Resolution.RESOLUTION_360P.getWidth();
+//        int height = Resolution.RESOLUTION_360P.getHeight();
+//        resampler.setOutputResolution(width,height);
+//        int bitrate = MediaHelper.GetBitRate(uri);
+//        resampler.setOutputBitRate(bitrate/2);
+//        int frameRate = MediaHelper.GetFrameRate(uri);
+//        resampler.setOutputFrameRate(frameRate);
+//        resampler.setOutputIFrameInterval(5);
+//        try {
+//            resampler.start();
+//        } catch (Throwable throwable) {
+//            throwable.printStackTrace();
+//        }
+
+        Compressor compressor = Compressor.getInstance();
         try {
-            resampler.start();
-        } catch (Throwable throwable) {
-            throwable.printStackTrace();
+            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(outputUri);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d("Mohan",e.getMessage());
         }
         /*MediaExtractor extractor = new MediaExtractor();
         File file = new File(filepath);
