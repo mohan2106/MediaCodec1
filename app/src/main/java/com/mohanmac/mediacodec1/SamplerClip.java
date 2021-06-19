@@ -1,6 +1,7 @@
 package com.mohanmac.mediacodec1;
 
 import android.net.Uri;
+import android.util.Log;
 
 public class SamplerClip {
     Uri mUri;
@@ -12,7 +13,8 @@ public class SamplerClip {
 
     public SamplerClip( Uri uri ) {
         mUri = uri;
-        mVideoDuration = MediaHelper.GetDuration( uri );
+        //mVideoDuration = MediaHelper.GetDuration( uri );
+
     }
 
     public void setStartTime( long startTime ) {
@@ -37,5 +39,9 @@ public class SamplerClip {
 
     public int getVideoDuration() {
         return mVideoDuration;
+    }
+
+    public void setVideoDuration(int videoDuration){
+        this.mVideoDuration = videoDuration;
     }
 }

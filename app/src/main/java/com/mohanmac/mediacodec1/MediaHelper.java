@@ -6,12 +6,14 @@ import java.util.List;
 import java.util.Locale;
 
 import android.annotation.TargetApi;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
+import android.util.Log;
 
 
 public class MediaHelper {
@@ -46,6 +48,7 @@ public class MediaHelper {
 
     public static int GetMediaMetadataRetrieverPropertyInteger( Uri uri, int key, int defaultValue ) {
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        Log.d("Mohan",uri.toString());
         retriever.setDataSource( uri.toString() );
         String value = retriever.extractMetadata( key );
 

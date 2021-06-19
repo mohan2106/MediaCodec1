@@ -10,7 +10,7 @@ import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
 import android.util.Log;
 import android.view.Surface;
-public class OutputSurface {
+public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private static final String TAG = "OutputSurface";
     private static final boolean VERBOSE = false;
     private static final int EGL_OPENGL_ES2_BIT = 4;
@@ -67,7 +67,7 @@ public class OutputSurface {
         //
         // Java language note: passing "this" out of a constructor is generally unwise,
         // but we should be able to get away with it here.
-        mSurfaceTexture.setOnFrameAvailableListener((SurfaceTexture.OnFrameAvailableListener) this);
+        mSurfaceTexture.setOnFrameAvailableListener(this);
         mSurface = new Surface( mSurfaceTexture );
     }
 
