@@ -64,7 +64,7 @@ public class EncoderMuxer {
         // QVGA at 2Mbps
         mWidth = 320;
         mHeight = 240;
-        mBitRate = 2000000;
+        mBitRate = 1000000;
 
 
         try {

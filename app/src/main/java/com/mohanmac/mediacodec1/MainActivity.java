@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
         requestPermissionsIfNecessary();
 
         File file = FileUtils.createFileDir(this,"output");
-        String outputUri = file.getAbsolutePath() + "/mohan_input_muxer.mp4";
+        String outputUri = file.getAbsolutePath() + "/mohan_input_muxer2.mp4";
         EncoderMuxer encoderMuxer = new EncoderMuxer();
         encoderMuxer.testEncodeVideoToMp4(outputUri);
         // Create request to get image from filesystem when button clicked
