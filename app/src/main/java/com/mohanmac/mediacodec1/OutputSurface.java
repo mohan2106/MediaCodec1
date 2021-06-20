@@ -10,6 +10,7 @@ import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
 import android.util.Log;
 import android.view.Surface;
+
 public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private static final String TAG = "OutputSurface";
     private static final boolean VERBOSE = false;

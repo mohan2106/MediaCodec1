@@ -1,5 +1,6 @@
 package com.mohanmac.mediacodec1;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -49,7 +50,7 @@ public class MediaHelper {
     public static int GetMediaMetadataRetrieverPropertyInteger( Uri uri, int key, int defaultValue ) {
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         Log.d("Mohan",uri.toString());
-        retriever.setDataSource( uri.toString() );
+        retriever.setDataSource(String.valueOf(uri));
         String value = retriever.extractMetadata( key );
 
         if ( value == null ) {

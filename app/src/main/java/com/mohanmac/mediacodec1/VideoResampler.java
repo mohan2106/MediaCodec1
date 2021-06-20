@@ -315,6 +315,8 @@ public class VideoResampler {
             if ( !inputDone ) {
                 int inputBufIndex = decoder.dequeueInputBuffer( TIMEOUT_USEC );
                 if ( inputBufIndex >= 0 ) {
+                    Log.d(TAG," 304 sample time is " + extractor.getSampleTime() / 1000 + " end Time is " + endTime);
+
                     if ( extractor.getSampleTime() / 1000 >= endTime ) {
                         // End of stream -- send empty frame with EOS flag set.
                         decoder.queueInputBuffer( inputBufIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM );

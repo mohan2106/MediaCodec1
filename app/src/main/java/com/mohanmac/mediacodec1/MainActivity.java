@@ -159,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
 //        startService(msgIntent);
         Log.d(TAG,"File path is " + filePath);
         Toast.makeText(this, "File path is " + filePath, Toast.LENGTH_SHORT).show();
-        MediaInfo(filePath,Uri.fromFile(new File(filePath)));
+        MediaInfo(filePath,Uri.parse(filePath));
 
 //        Uri imageUri = null;
 //        if (data.getClipData() != null) {
@@ -184,6 +184,8 @@ public class MainActivity extends AppCompatActivity {
         resampler.setInput(uri);
 
         SamplerClip clip = new SamplerClip(uri);
+        int duration = MediaHelper.GetDuration(uri);
+        clip.setVideoDuration(duration);
         resampler.addSamplerClip(clip);
         File file = FileUtils.createFileDir(this,"output");
         Uri outputUri = Uri.parse(file.getAbsolutePath() + "/mohan.mp4");
@@ -191,11 +193,13 @@ public class MainActivity extends AppCompatActivity {
         int width = Resolution.RESOLUTION_360P.getWidth();
         int height = Resolution.RESOLUTION_360P.getHeight();
         resampler.setOutputResolution(width,height);
-        int bitrate = MediaHelper.GetBitRate(uri);
+        int bitrate = MediaHelper.GetBitRate(Uri.parse(filepath));
         resampler.setOutputBitRate(bitrate/2);
         int frameRate = MediaHelper.GetFrameRate(uri);
-        resampler.setOutputFrameRate(frameRate);
+        resampler.setOutputFrameRate(30);
         resampler.setOutputIFrameInterval(5);
+
+
         try {
             resampler.start();
         } catch (Throwable throwable) {

@@ -33,7 +33,7 @@ public class ExtractDecodeEditEncodeMuxTest {
     }
 
     private static final String TAG = ExtractDecodeEditEncodeMuxTest.class.getSimpleName();
-    private static final boolean VERBOSE = false; // lots of logging
+    private static final boolean VERBOSE = true; // lots of logging
     /** How long to wait for the next buffer to become available. */
     private static final int TIMEOUT_USEC = 10000;
     /** Where to output the test files. */
@@ -66,9 +66,9 @@ public class ExtractDecodeEditEncodeMuxTest {
                     "  gl_FragColor = texture2D(sTexture, vTextureCoord).rbga;\n" +
                     "}\n";
     /** Whether to copy the video from the test video. */
-    private boolean mCopyVideo;
+    private boolean mCopyVideo = false;
     /** Whether to copy the audio from the test video. */
-    private boolean mCopyAudio;
+    private boolean mCopyAudio = false;
     /** Width of the output frames. */
     private int mWidth = -1;
     /** Height of the output frames. */
@@ -82,7 +82,7 @@ public class ExtractDecodeEditEncodeMuxTest {
         setSize(1280, 720);
         setSource(inputFile);
         setCopyVideo();
-        setCopyAudio();
+        //setCopyAudio();
         TestWrapper.runTest(this);
     }
 
@@ -149,12 +149,12 @@ public class ExtractDecodeEditEncodeMuxTest {
      */
     private void setOutputFile() {
         StringBuilder sb = new StringBuilder();
-        sb.append(OUTPUT_FILENAME_DIR.getAbsolutePath());
-        sb.append("/cts-media-");
+        sb.append(OUTPUT_FILENAME_DIR.getAbsolutePath() );
+        sb.append("/output/cts-media-");
         sb.append(getClass().getSimpleName());
         //assertTrue("should have called setSource() first", mSourceResId != -1);
         sb.append('-');
-        sb.append(mSourceResId);
+//        sb.append(mSourceResId);
         if (mCopyVideo) {
             //assertTrue("should have called setSize() first", mWidth != -1);
             //assertTrue("should have called setSize() first", mHeight != -1);
@@ -171,6 +171,11 @@ public class ExtractDecodeEditEncodeMuxTest {
         }
         sb.append(".mp4");
         mOutputFile = sb.toString();
+        Log.d(TAG,mOutputFile);
+        File file = new File(mOutputFile);
+        if(file.exists()){
+            file.delete();
+        }
     }
     /**
      * Tests encoding and subsequently decoding video from frames generated into a buffer.
@@ -261,6 +266,8 @@ public class ExtractDecodeEditEncodeMuxTest {
                 audioDecoder = createAudioDecoder(inputFormat);
             }
             // Creates a muxer but do not start or add tracks just yet.
+            Log.d("Mohan","Fun extractDecodeEditEncodeMux() called [572]");
+
             muxer = createMuxer();
             doExtractDecodeEditEncodeMux(
                     videoExtractor,
@@ -272,6 +279,7 @@ public class ExtractDecodeEditEncodeMuxTest {
                     muxer,
                     inputSurface,
                     outputSurface);
+
         } finally {
             if (VERBOSE) Log.d(TAG, "releasing extractor, decoder, encoder, and muxer");
             // Try to release everything we acquired, even if one of the releases fails, in which
@@ -564,7 +572,9 @@ public class ExtractDecodeEditEncodeMuxTest {
         int audioExtractedFrameCount = 0;
         int audioDecodedFrameCount = 0;
         int audioEncodedFrameCount = 0;
+        Log.d("Mohan","Fun doExtractDecodeEditEncodeMux() called [575]");
         while ((mCopyVideo && !videoEncoderDone) || (mCopyAudio && !audioEncoderDone)) {
+            Log.d("Mohan","Inside while loop [577]");
             if (VERBOSE) {
                 Log.d(TAG, String.format(
                         "loop: "
@@ -998,7 +1008,7 @@ public class ExtractDecodeEditEncodeMuxTest {
         // TODO: Check the generated output file.
     }
     private static boolean isVideoFormat(MediaFormat format) {
-        return getMimeTypeFor(format).startsWith("video/");
+        return getMimeTypeFor(format).startsWith("video/avc");
     }
     private static boolean isAudioFormat(MediaFormat format) {
         return getMimeTypeFor(format).startsWith("audio/");
