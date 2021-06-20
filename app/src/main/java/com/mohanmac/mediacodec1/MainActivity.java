@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -206,20 +207,28 @@ public class MainActivity extends AppCompatActivity {
             throwable.printStackTrace();
         }*/
 
-        ExtractDecodeEditEncodeMuxTest extractDecodeEditEncodeMuxTest = ExtractDecodeEditEncodeMuxTest.getInstance();
-        try {
-            extractDecodeEditEncodeMuxTest.testExtractDecodeEditEncodeMux720p(filepath);
-        } catch (Throwable throwable) {
-            throwable.printStackTrace();
-        }
-
-//        Compressor compressor = Compressor.getInstance();
+//        ExtractDecodeEditEncodeMuxTest extractDecodeEditEncodeMuxTest = ExtractDecodeEditEncodeMuxTest.getInstance();
 //        try {
-//            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            Log.d("Mohan",e.getMessage());
+//            extractDecodeEditEncodeMuxTest.testExtractDecodeEditEncodeMux720p(filepath);
+//        } catch (Throwable throwable) {
+//            throwable.printStackTrace();
 //        }
+
+        Random rand = new Random();
+        int number = rand.nextInt();
+        File file = FileUtils.createFileDir(this,"output");
+        String outputUri = file.getAbsolutePath() + "/mohan" + number + ".mp4";
+        File file1 = new File(outputUri);
+        if(file1.exists()){
+            file1.delete();
+        }
+        Compressor compressor = Compressor.getInstance();
+        try {
+            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d("Mohan",e.getMessage());
+        }
         /*MediaExtractor extractor = new MediaExtractor();
         File file = new File(filepath);
 
