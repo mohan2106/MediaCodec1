@@ -491,57 +491,8 @@ public class Compressor {
         return -1;
     }
 
-    private void generateFrame(int frameIndex, int colorFormat, byte[] frameData) {
-        final int HALF_WIDTH = mWidth / 2;
-        boolean semiPlanar = isSemiPlanarYUV(colorFormat);
-        // Set to zero.  In YUV this is a dull green.
-        Arrays.fill(frameData, (byte) 0);
-        int startX, startY, countX, countY;
-        frameIndex %= 8;
-        //frameIndex = (frameIndex / 8) % 8;    // use this instead for debug -- easier to see
-        if (frameIndex < 4) {
-            startX = frameIndex * (mWidth / 4);
-            startY = 0;
-        } else {
-            startX = (7 - frameIndex) * (mWidth / 4);
-            startY = mHeight / 2;
-        }
-        for (int y = startY + (mHeight/2) - 1; y >= startY; --y) {
-            for (int x = startX + (mWidth/4) - 1; x >= startX; --x) {
-                if (semiPlanar) {
-                    // full-size Y, followed by UV pairs at half resolution
-                    // e.g. Nexus 4 OMX.qcom.video.encoder.avc COLOR_FormatYUV420SemiPlanar
-                    // e.g. Galaxy Nexus OMX.TI.DUCATI1.VIDEO.H264E
-                    //        OMX_TI_COLOR_FormatYUV420PackedSemiPlanar
-                    frameData[y * mWidth + x] = (byte) TEST_Y;
-                    if ((x & 0x01) == 0 && (y & 0x01) == 0) {
-                        frameData[mWidth*mHeight + y * HALF_WIDTH + x] = (byte) TEST_U;
-                        frameData[mWidth*mHeight + y * HALF_WIDTH + x + 1] = (byte) TEST_V;
-                    }
-                } else {
-                    // full-size Y, followed by quarter-size U and quarter-size V
-                    // e.g. Nexus 10 OMX.Exynos.AVC.Encoder COLOR_FormatYUV420Planar
-                    // e.g. Nexus 7 OMX.Nvidia.h264.encoder COLOR_FormatYUV420Planar
-                    frameData[y * mWidth + x] = (byte) TEST_Y;
-                    if ((x & 0x01) == 0 && (y & 0x01) == 0) {
-                        frameData[mWidth*mHeight + (y/2) * HALF_WIDTH + (x/2)] = (byte) TEST_U;
-                        frameData[mWidth*mHeight + HALF_WIDTH * (mHeight / 2) +
-                                (y/2) * HALF_WIDTH + (x/2)] = (byte) TEST_V;
-                    }
-                }
-            }
-        }
-    }
-    /**
-     * Performs a simple check to see if the frame is more or less right.
-     * <p>
-     * See {@link #generateFrame} for a description of the layout.  The idea is to sample
-     * one pixel from the middle of the 8 regions, and verify that the correct one has
-     * the non-background color.  We can't know exactly what the video encoder has done
-     * with our frames, so we just check to see if it looks like more or less the right thing.
-     *
-     * @return true if the frame looks good
-     */
+
+
     private boolean checkFrame(int frameIndex, MediaFormat format, ByteBuffer frameData) {
         // Check for color formats we don't understand.  There is no requirement for video
         // decoders to use a "mundane" format, so we just give a pass on proprietary formats.

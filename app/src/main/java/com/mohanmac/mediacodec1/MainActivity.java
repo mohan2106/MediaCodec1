@@ -180,7 +180,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void MediaInfo(String filepath,Uri uri){
 
-        VideoResampler resampler = new VideoResampler();
+        /*VideoResampler resampler = new VideoResampler();
         resampler.setInput(uri);
 
         SamplerClip clip = new SamplerClip(uri);
@@ -198,6 +198,13 @@ public class MainActivity extends AppCompatActivity {
         resampler.setOutputIFrameInterval(5);
         try {
             resampler.start();
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }*/
+
+        ExtractDecodeEditEncodeMuxTest extractDecodeEditEncodeMuxTest = ExtractDecodeEditEncodeMuxTest.getInstance();
+        try {
+            extractDecodeEditEncodeMuxTest.testExtractDecodeEditEncodeMux720p(filepath);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
