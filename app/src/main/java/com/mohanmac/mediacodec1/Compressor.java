@@ -5,6 +5,7 @@ import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.media.MediaMuxer;
 import android.opengl.GLES20;
 import android.util.Log;
 
@@ -57,6 +58,8 @@ public class Compressor {
     private int mBitRate = -1;
     private String inputFilePath = null;
     private String outputFilePath = null;
+    private static final int OUTPUT_VIDEO_COLOR_FORMAT =
+            MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface;
 
     private static final int TEST_Y = 120;                  // YUV values for colored rect
     private static final int TEST_U = 160;
@@ -69,6 +72,8 @@ public class Compressor {
     private static final int TEST_B1 = 186;
     // largest color component delta seen (i.e. actual vs. expected)
     private int mLargestColorDelta;
+    private boolean mMuxerStarted;
+    private int mTrackIndex;
 
     public void testEncodeDecodeVideoFromBufferToBuffer720p(String inputFilePath,String outputFilePath) throws Exception {
         this.outputFilePath = outputFilePath;
@@ -89,6 +94,7 @@ public class Compressor {
     private void encodeDecodeVideoFromBuffer(boolean toSurface) throws Exception {
         MediaCodec encoder = null;
         MediaCodec decoder = null;
+        MediaMuxer mMuxer = null;
         mLargestColorDelta = -1;
         try {
             MediaCodecInfo codecInfo = selectCodec(MIME_TYPE);
@@ -99,7 +105,7 @@ public class Compressor {
             }
             if (VERBOSE) Log.d(TAG, "found codec: " + codecInfo.getName());
             int colorFormat = selectColorFormat(codecInfo, MIME_TYPE);
-            if (VERBOSE) Log.d(TAG, "found colorFormat: " + colorFormat);
+            if (VERBOSE) Log.d(TAG, "found colorFormat: " + OUTPUT_VIDEO_COLOR_FORMAT);
             // We avoid the device-specific limitations on width and height by using values that
             // are multiples of 16, which all tested devices seem to be able to handle.
             MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
@@ -118,7 +124,10 @@ public class Compressor {
             // Create a MediaCodec for the decoder, just based on the MIME type.  The various
             // format details will be passed through the csd-0 meta-data later on.
             decoder = MediaCodec.createDecoderByType(MIME_TYPE);
-            doEncodeDecodeVideoFromBuffer(encoder, colorFormat, decoder, toSurface);
+            mMuxer = new MediaMuxer(outputFilePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+            mTrackIndex = -1;
+            mMuxerStarted = false;
+            doEncodeDecodeVideoFromBuffer(encoder, colorFormat, decoder, toSurface, mMuxer);
         } finally {
             if (VERBOSE) Log.d(TAG, "releasing codecs");
             if (encoder != null) {
@@ -129,8 +138,23 @@ public class Compressor {
                 decoder.stop();
                 decoder.release();
             }
+            if(mMuxer!=null) {
+                mMuxer.stop();
+                mMuxer.release();
+                mMuxer = null;
+            }
             Log.i(TAG, "Largest color delta: " + mLargestColorDelta);
         }
+
+        // Create a MediaMuxer.  We can't add the video track and start() the muxer here,
+        // because our MediaFormat doesn't have the Magic Goodies.  These can only be
+        // obtained from the encoder after it has started processing data.
+        //
+        // We're not actually interested in multiplexing audio.  We just want to convert
+        // the raw H.264 elementary stream we get from MediaCodec into a .mp4 file.
+
+
+
     }
 
     private static int selectColorFormat(MediaCodecInfo codecInfo, String mimeType) {
@@ -181,7 +205,7 @@ public class Compressor {
     }
 
     private void doEncodeDecodeVideoFromBuffer(MediaCodec encoder, int encoderColorFormat,
-                                               MediaCodec decoder, boolean toSurface) {
+                                               MediaCodec decoder, boolean toSurface, MediaMuxer mMuxer) {
         final int TIMEOUT_USEC = 10000;
         ByteBuffer[] encoderInputBuffers = encoder.getInputBuffers();
         ByteBuffer[] encoderOutputBuffers = encoder.getOutputBuffers();
@@ -214,16 +238,16 @@ public class Compressor {
             long encodedSize = 0;
             // Save a copy to disk.  Useful for debugging the test.  Note this is a raw elementary
             // stream, not a .mp4 file, so not all players will know what to do with it.
-            FileOutputStream outputStream = null;
-            if (DEBUG_SAVE_FILE) {
-                String fileName = outputFilePath;
-                File file1 = new File(fileName);
-                if(file1.exists()){
-                    file1.delete();
-                }
-                outputStream = new FileOutputStream(fileName);
-                Log.d(TAG, "encoded output will be saved as " + fileName);
-            }
+//            FileOutputStream outputStream = null;
+//            if (DEBUG_SAVE_FILE) {
+//                String fileName = outputFilePath;
+//                File file1 = new File(fileName);
+//                if(file1.exists()){
+//                    file1.delete();
+//                }
+//                outputStream = new FileOutputStream(fileName);
+//                Log.d(TAG, "encoded output will be saved as " + fileName);
+//            }
             if (toSurface) {
                 outputSurface = new OutputSurface(mWidth, mHeight);
             }
@@ -232,7 +256,7 @@ public class Compressor {
             boolean encoderDone = false;
             boolean outputDone = false;
             int totalDataRead = 0;
-            while (!outputDone) {
+            while (!encoderDone) {
                 if (VERBOSE) Log.d(TAG, "loop");
                 // If we're not done submitting frames, generate a new one and submit it.  By
                 // doing this on every loop we're working to ensure that the encoder always has
@@ -244,41 +268,35 @@ public class Compressor {
                     int inputBufIndex = encoder.dequeueInputBuffer(TIMEOUT_USEC);
                     if (VERBOSE) Log.d(TAG, "inputBufIndex=" + inputBufIndex);
                     if (inputBufIndex >= 0) {
-                        long ptsUsec = computePresentationTime(generateIndex);
-                        if (totalDataRead >= fileData.length) {
-                            // Send an empty frame with the end-of-stream flag set.  If we set EOS
-                            // on a frame with data, that frame data will be ignored, and the
-                            // output will be short one frame.
-                            encoder.queueInputBuffer(inputBufIndex, 0, 0, ptsUsec,
+
+                        ByteBuffer inputBuf = encoderInputBuffers[inputBufIndex];
+                        int size = extractor.readSampleData(inputBuf, 0);
+                        long presentationTime = extractor.getSampleTime();
+                        if (VERBOSE) {
+                            Log.d(TAG, "video extractor: returned buffer of size " + size);
+                            Log.d(TAG, "video extractor: returned buffer for time " + presentationTime);
+                        }
+                        if (size >= 0) {
+                            encoder.queueInputBuffer(
+                                    inputBufIndex,
+                                    0,
+                                    size,
+                                    presentationTime,
+                                    extractor.getSampleFlags());
+                        }
+                        inputDone = !extractor.advance();
+                        if (inputDone) {
+                            if (VERBOSE) Log.d(TAG, "video extractor: EOS");
+                            encoder.queueInputBuffer(
+                                    inputBufIndex,
+                                    0,
+                                    0,
+                                    0,
                                     MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                            inputDone = true;
-                            if (VERBOSE) Log.d(TAG, "sent input EOS (with zero-length frame)");
-                        } else {
-                            //generateFrame(generateIndex, encoderColorFormat, frameData);
-                            ByteBuffer inputBuf = encoderInputBuffers[inputBufIndex];
-
-                            int limit = inputBuf.capacity();
-                            limit = Math.min(limit,
-                                    fileData.length - totalDataRead);
-
-                            totalDataRead += limit;
-                            int pos = generateIndex * limit;
-                            byte[] subData = new byte[limit];
-                            System.arraycopy(fileData, pos, subData, 0, limit);
-                            inputBuf.clear();
-                            inputBuf.put(subData);
-                            encoder.queueInputBuffer(inputBufIndex, 0, limit, ptsUsec, 0);
-                            if (VERBOSE) Log.d(TAG, "submitted frame " + generateIndex + " to enc");
-//                            // the buffer should be sized to hold one full frame
-//                            if(inputBuf.capacity() >= frameData.length) {
-//                                inputBuf.clear();
-//                                inputBuf.put(frameData);
-//
-//                            }else{
-//                                Log.d(TAG,"Buffer size is too low to hold one frame");
-//                            }
                         }
                         generateIndex++;
+                        // We extracted a frame, let's try something else next.
+
                     } else {
                         // either all in use, or we timed out during initial setup
                         if (VERBOSE) Log.d(TAG, "input buffer not available");
@@ -302,6 +320,15 @@ public class Compressor {
                     } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                         // not expected for an encoder
                         MediaFormat newFormat = encoder.getOutputFormat();
+                        if (mMuxerStarted) {
+                            throw new RuntimeException("format changed twice");
+                        }
+                        Log.d(TAG, "encoder output format changed: " + newFormat);
+
+                        // now that we have the Magic Goodies, start the muxer
+                        mTrackIndex = mMuxer.addTrack(newFormat);
+                        mMuxer.start();
+                        mMuxerStarted = true;
                         if (VERBOSE) Log.d(TAG, "encoder output format changed: " + newFormat);
                     } else if (encoderStatus < 0) {
                         Log.d(TAG,"unexpected result from encoder.dequeueOutputBuffer: " + encoderStatus);
@@ -314,18 +341,27 @@ public class Compressor {
                         encodedData.position(info.offset);
                         encodedData.limit(info.offset + info.size);
                         encodedSize += info.size;
-                        if (outputStream != null) {
-                            byte[] data = new byte[info.size];
-                            encodedData.get(data);
-                            encodedData.position(info.offset);
-                            try {
-                                outputStream.write(data);
-                            } catch (IOException ioe) {
-                                Log.w(TAG, "failed writing debug data to file");
-                                throw new RuntimeException(ioe);
+
+                        if(info.size > 0) {
+                            if (!mMuxerStarted) {
+                                throw new RuntimeException("muxer hasn't started");
                             }
+                            mMuxer.writeSampleData(mTrackIndex, encodedData, info);
+                            if (VERBOSE) Log.d(TAG, "sent " + info.size + " bytes to muxer");
                         }
-                        if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
+//                        if (outputStream != null) {
+//                            byte[] data = new byte[info.size];
+//                            encodedData.get(data);
+//                            encodedData.position(info.offset);
+//
+//                            outputStream.write(encodedData);
+//
+//
+//                        }
+                        encoderDone = (info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
+                        if (VERBOSE) Log.d(TAG, "passed " + info.size + " bytes to decoder"
+                                + (encoderDone ? " (EOS)" : ""));
+                        if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0 && false) {
                             // Codec config info.  Only expected on first packet.  One way to
                             // handle this is to manually stuff the data into the MediaFormat
                             // and pass that to configure().  We do that here to exercise the API.
@@ -351,9 +387,7 @@ public class Compressor {
                                 inputBuf.put(encodedData);
                                 decoder.queueInputBuffer(inputBufIndex, 0, info.size,
                                         info.presentationTimeUs, info.flags);
-                                encoderDone = (info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
-                                if (VERBOSE) Log.d(TAG, "passed " + info.size + " bytes to decoder"
-                                        + (encoderDone ? " (EOS)" : ""));
+
                             }
                         }
                         encoder.releaseOutputBuffer(encoderStatus, false);
@@ -365,7 +399,7 @@ public class Compressor {
                 //
                 // If we're decoding to a Surface, we'll get notified here as usual but the
                 // ByteBuffer references will be null.  The data is sent to Surface instead.
-                if (decoderConfigured) {
+                if (decoderConfigured && false) {
                     int decoderStatus = decoder.dequeueOutputBuffer(info, TIMEOUT_USEC);
                     if (decoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
                         // no output available yet
@@ -379,6 +413,16 @@ public class Compressor {
                     } else if (decoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                         // this happens before the first frame is returned
                         decoderOutputFormat = decoder.getOutputFormat();
+                        if (mMuxerStarted) {
+                            throw new RuntimeException("format changed twice");
+                        }
+
+                        Log.d(TAG, "encoder output format changed: " + decoderOutputFormat);
+
+                        // now that we have the Magic Goodies, start the muxer
+                        mTrackIndex = mMuxer.addTrack(decoderOutputFormat);
+                        mMuxer.start();
+                        mMuxerStarted = true;
                         if (VERBOSE) Log.d(TAG, "decoder output format changed: " +
                                 decoderOutputFormat);
                     } else if (decoderStatus < 0) {
@@ -388,11 +432,12 @@ public class Compressor {
                             ByteBuffer outputFrame = decoderOutputBuffers[decoderStatus];
                             outputFrame.position(info.offset);
                             outputFrame.limit(info.offset + info.size);
+
                             rawSize += info.size;
                             if (info.size == 0) {
                                 if (VERBOSE) Log.d(TAG, "got empty frame");
                             } else {
-                                if (VERBOSE) Log.d(TAG, "decoded, checking frame " + checkIndex);
+                                 if (VERBOSE) Log.d(TAG, "decoded, checking frame " + checkIndex);
                                  if( computePresentationTime(checkIndex) == info.presentationTimeUs) {
                                      if (!checkFrame(checkIndex++, decoderOutputFormat, outputFrame)) {
                                          badFrames++;
@@ -400,6 +445,11 @@ public class Compressor {
                                  }else{
                                      Log.d(TAG,"Wrong time stamp");
                                  }
+                                if (!mMuxerStarted) {
+                                    throw new RuntimeException("muxer hasn't started");
+                                }
+                                mMuxer.writeSampleData(mTrackIndex, outputFrame, info);
+                                if (VERBOSE) Log.d(TAG, "sent " + info.size + " bytes to muxer");
                             }
                             if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                                 if (VERBOSE) Log.d(TAG, "output EOS");
@@ -439,14 +489,14 @@ public class Compressor {
             }
             if (VERBOSE) Log.d(TAG, "decoded " + checkIndex + " frames at "
                     + mWidth + "x" + mHeight + ": raw=" + rawSize + ", enc=" + encodedSize);
-            if (outputStream != null) {
-                try {
-                    outputStream.close();
-                } catch (IOException ioe) {
-                    Log.w(TAG, "failed closing debug file");
-                    throw new RuntimeException(ioe);
-                }
-            }
+//            if (outputStream != null) {
+//                try {
+//                    outputStream.close();
+//                } catch (IOException ioe) {
+//                    Log.w(TAG, "failed closing debug file");
+//                    throw new RuntimeException(ioe);
+//                }
+//            }
             if (outputSurface != null) {
                 outputSurface.release();
             }
