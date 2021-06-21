@@ -222,13 +222,14 @@ public class MainActivity extends AppCompatActivity {
         if(file1.exists()){
             file1.delete();
         }
-        Compressor compressor = Compressor.getInstance();
-        try {
-            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
-        } catch (Exception e) {
-            e.printStackTrace();
-            Log.d("Mohan",e.getMessage());
-        }
+        copyVideo(filepath,outputUri);
+//        Compressor compressor = Compressor.getInstance();
+//        try {
+//            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            Log.d("Mohan",e.getMessage());
+//        }
         /*MediaExtractor extractor = new MediaExtractor();
         File file = new File(filepath);
 
@@ -257,5 +258,13 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }*/
+    }
+
+    private void copyVideo(String source,String dest){
+        try {
+            CopyVideo.genVideoUsingMuxer(source,dest,0,100,false,true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
