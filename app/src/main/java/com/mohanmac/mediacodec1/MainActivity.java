@@ -262,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void copyVideo(String source,String dest){
         try {
-            CopyVideo.genVideoUsingMuxer(source,dest,0,100,false,true);
+            CopyVideo.genVideoUsingMuxer(source,dest,0,10000,true,true);
         } catch (IOException e) {
             e.printStackTrace();
         }
