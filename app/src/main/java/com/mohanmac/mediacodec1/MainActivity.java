@@ -214,22 +214,21 @@ public class MainActivity extends AppCompatActivity {
 //            throwable.printStackTrace();
 //        }
 
-        Random rand = new Random();
-        int number = rand.nextInt();
+
         File file = FileUtils.createFileDir(this,"output");
-        String outputUri = file.getAbsolutePath() + "/mohan" + number + ".mp4";
+        String outputUri = file.getAbsolutePath() + "/mohan" + ".mp4";
         File file1 = new File(outputUri);
         if(file1.exists()){
             file1.delete();
         }
         copyVideo(filepath,outputUri);
-//        Compressor compressor = Compressor.getInstance();
-//        try {
-//            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            Log.d("Mohan",e.getMessage());
-//        }
+        Compressor compressor = Compressor.getInstance();
+        try {
+            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d("Mohan",e.getMessage());
+        }
         /*MediaExtractor extractor = new MediaExtractor();
         File file = new File(filepath);
 
