@@ -82,7 +82,7 @@ public class ExtractDecodeEditEncodeMuxTest {
         setSize(1280, 720);
         setSource(inputFile);
         setCopyVideo();
-        //setCopyAudio();
+        setCopyAudio();
         TestWrapper.runTest(this);
     }
 
@@ -108,7 +108,7 @@ public class ExtractDecodeEditEncodeMuxTest {
             TestWrapper wrapper = new TestWrapper(test);
             Thread th = new Thread(wrapper, "codec test");
             th.start();
-            th.join();
+//            th.join();
             if (wrapper.mThrowable != null) {
                 throw wrapper.mThrowable;
             }
