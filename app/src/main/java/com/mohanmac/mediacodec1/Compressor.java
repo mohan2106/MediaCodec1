@@ -118,8 +118,18 @@ public class Compressor {
             if (VERBOSE) Log.d(TAG, "format: " + format);
             // Create a MediaCodec for the desired codec, then configure it as an encoder with
             // our desired properties.
+
+            //===================================================================Encoder type should be same
+            MediaExtractor extractor = new MediaExtractor();
+            extractor.setDataSource(inputFilePath);
+            //selecting video track
+            int videoTrack = getVideoTrackIndex(extractor);
+            MediaFormat inputFormat = extractor.getTrackFormat(videoTrack);
+
             encoder = MediaCodec.createByCodecName(codecInfo.getName());
             encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+//            encoder = MediaCodec.createEncoderByType(inputFormat.getString(MediaFormat.KEY_MIME));
+//            encoder.configure(inputFormat,null,null,0);
             encoder.start();
             // Create a MediaCodec for the decoder, just based on the MIME type.  The various
             // format details will be passed through the csd-0 meta-data later on.
@@ -145,15 +155,6 @@ public class Compressor {
             }
             Log.i(TAG, "Largest color delta: " + mLargestColorDelta);
         }
-
-        // Create a MediaMuxer.  We can't add the video track and start() the muxer here,
-        // because our MediaFormat doesn't have the Magic Goodies.  These can only be
-        // obtained from the encoder after it has started processing data.
-        //
-        // We're not actually interested in multiplexing audio.  We just want to convert
-        // the raw H.264 elementary stream we get from MediaCodec into a .mp4 file.
-
-
 
     }
 
@@ -286,13 +287,19 @@ public class Compressor {
                         }
                         inputDone = !extractor.advance();
                         if (inputDone) {
+                            inputBufIndex = encoder.dequeueInputBuffer(-1);
                             if (VERBOSE) Log.d(TAG, "video extractor: EOS");
-                            encoder.queueInputBuffer(
-                                    inputBufIndex,
-                                    0,
-                                    0,
-                                    0,
-                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                            try{
+                                encoder.queueInputBuffer(
+                                        inputBufIndex,
+                                        0,
+                                        0,
+                                        0,
+                                        MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                            }catch (Exception e){
+                                Log.d(TAG,e.getMessage());
+                            }
+
                         }
                         generateIndex++;
                         // We extracted a frame, let's try something else next.

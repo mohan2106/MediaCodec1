@@ -207,12 +207,12 @@ public class MainActivity extends AppCompatActivity {
             throwable.printStackTrace();
         }*/
 
-//        ExtractDecodeEditEncodeMuxTest extractDecodeEditEncodeMuxTest = ExtractDecodeEditEncodeMuxTest.getInstance();
-//        try {
-//            extractDecodeEditEncodeMuxTest.testExtractDecodeEditEncodeMux720p(filepath);
-//        } catch (Throwable throwable) {
-//            throwable.printStackTrace();
-//        }
+        ExtractDecodeEditEncodeMuxTest extractDecodeEditEncodeMuxTest = ExtractDecodeEditEncodeMuxTest.getInstance();
+        try {
+            extractDecodeEditEncodeMuxTest.testExtractDecodeEditEncodeMux720p(filepath);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
 
 
         File file = FileUtils.createFileDir(this,"output");
@@ -221,14 +221,14 @@ public class MainActivity extends AppCompatActivity {
         if(file1.exists()){
             file1.delete();
         }
-        copyVideo(filepath,outputUri);
-        Compressor compressor = Compressor.getInstance();
-        try {
-            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
-        } catch (Exception e) {
-            e.printStackTrace();
-            Log.d("Mohan",e.getMessage());
-        }
+        //copyVideo(filepath,outputUri);
+//        Compressor compressor = Compressor.getInstance();
+//        try {
+//            compressor.testEncodeDecodeVideoFromBufferToBuffer720p(filepath, outputUri);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            Log.d("Mohan",e.getMessage());
+//        }
         /*MediaExtractor extractor = new MediaExtractor();
         File file = new File(filepath);
 

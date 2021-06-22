@@ -672,6 +672,7 @@ public class ExtractDecodeEditEncodeMuxTest {
                 audioExtractorDone = !audioExtractor.advance();
                 if (audioExtractorDone) {
                     if (VERBOSE) Log.d(TAG, "audio extractor: EOS");
+                    decoderInputBufferIndex = audioDecoder.dequeueInputBuffer(-1);
                     audioDecoder.queueInputBuffer(
                             decoderInputBufferIndex,
                             0,
