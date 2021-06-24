@@ -40,7 +40,7 @@ public class ExtractDecodeEditEncodeMuxTest {
     private static final File OUTPUT_FILENAME_DIR = Environment.getExternalStorageDirectory();
     // parameters for the video encoder
     private static final String OUTPUT_VIDEO_MIME_TYPE = "video/avc"; // H.264 Advanced Video Coding
-    private static final int OUTPUT_VIDEO_BIT_RATE = 2000000; // 2Mbps
+    private static final int OUTPUT_VIDEO_BIT_RATE = 1000000; // 0.5Mbps
     private static final int OUTPUT_VIDEO_FRAME_RATE = 15; // 15fps
     private static final int OUTPUT_VIDEO_IFRAME_INTERVAL = 10; // 10 seconds between I-frames
     private static final int OUTPUT_VIDEO_COLOR_FORMAT =

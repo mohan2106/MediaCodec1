@@ -7,6 +7,7 @@ import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.os.Build;
+import android.provider.MediaStore;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -48,6 +49,7 @@ public class TEST {
     private MediaMuxer mMuxer = null;
     boolean videoExtractorDone = false;
     MediaFormat mOutputFormat;
+    MediaCodec encoder = null;
 
 
     public void testEncodeDecodeVideoFromBufferToBuffer720p(String inputFilePath,String outputFilePath) throws Exception {
@@ -67,7 +69,7 @@ public class TEST {
     }
 
     private void encodeDecodeVideoFromBuffer(boolean toSurface) throws Exception {
-        MediaCodec encoder = null;
+
         //MediaCodec decoder = null;
         mLargestColorDelta = -1;
         try {
@@ -85,7 +87,7 @@ public class TEST {
             MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
             // Set some properties.  Failing to specify some of these can cause the MediaCodec
             // configure() call to throw an unhelpful exception.
-            format.setInteger(MediaFormat.KEY_COLOR_FORMAT, OUTPUT_VIDEO_COLOR_FORMAT);
+            format.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat);
             format.setInteger(MediaFormat.KEY_BIT_RATE, mBitRate);
             format.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
             format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
@@ -108,6 +110,7 @@ public class TEST {
 
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                Log.d(TAG,"above lollipop");
                 encoder.setCallback(new MediaCodec.Callback() {
                     @Override
                     public void onInputBufferAvailable(@NonNull MediaCodec codec, int index) {
@@ -121,13 +124,13 @@ public class TEST {
                         }
                         if (videoExtractorDone) {
                             if (VERBOSE) Log.d(TAG, "video extractor: EOS");
-//                            codec.queueInputBuffer(
-//                                    index,
-//                                    0,
-//                                    0,
-//                                    0,
-//                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                            codec.signalEndOfInputStream();
+                            codec.queueInputBuffer(
+                                    index,
+                                    0,
+                                    0,
+                                    0,
+                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+//                            codec.signalEndOfInputStream();
                         }else{
                             if (size >= 0) {
                                 codec.queueInputBuffer(
@@ -144,10 +147,27 @@ public class TEST {
                     @Override
                     public void onOutputBufferAvailable(@NonNull MediaCodec codec, int index, @NonNull MediaCodec.BufferInfo info) {
                         ByteBuffer encoderOutputBuffer = codec.getOutputBuffer(index);
-                        if (info.size != 0) {
-                            mMuxer.writeSampleData(
-                                    index, encoderOutputBuffer, info);
+                        if (VERBOSE) {
+                            Log.d(TAG, "video encoder output: returned buffer of size " + info.size);
+                            Log.d(TAG, "video encoder output: returned buffer for time " + info.presentationTimeUs);
                         }
+                        if (info.size != 0) {
+                            Log.d(TAG,"Writing data to muxer");
+                            mMuxer.writeSampleData(
+                                    mTrackIndex, encoderOutputBuffer, info);
+                        }
+                        encoder.releaseOutputBuffer(index,false);
+                        if ((info.flags
+                                & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                            if (VERBOSE) Log.d(TAG, "video decoder: EOS");
+                            mMuxer.stop();
+                            mMuxer.release();
+                            mMuxer = null;
+                            encoder.stop();
+                            encoder.release();
+//                            encoder = null;
+                        }
+
                     }
 
                     @Override
@@ -166,21 +186,33 @@ public class TEST {
                         }
                     }
                 });
+            }else{
+                Log.d(TAG,"Not above lollipop");
             }
-            encoder.configure(mOutputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+            //mOutputFormat = encoder.getOutputFormat();
+//            int width = mOutputFormat.getInteger(MediaFormat.KEY_WIDTH);
+//            if(mOutputFormat.containsKey("crop-left") && mOutputFormat.containsKey("crop-right")){
+//                width = mOutputFormat.getInteger("crop-right") + 1 - mOutputFormat.getInteger("crop-left");
+//            }
+//            int hight = mOutputFormat.getInteger(MediaFormat.KEY_WIDTH);
+//            if(mOutputFormat.containsKey("crop-top") && mOutputFormat.containsKey("crop-bottom")){
+//                hight = mOutputFormat.getInteger("crop-top") + 1 - mOutputFormat.getInteger("crop-bottom");
+//            }
+//            Log.d(TAG,"original resolution is " + width + "/"  + hight + " | But we set " + mWidth + "/" + mHeight);
+            encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             encoder.start();
             //doEncodeDecodeVideoFromBuffer(encoder, colorFormat, toSurface, mMuxer);
         } finally {
             if (VERBOSE) Log.d(TAG, "releasing codecs");
-            if (encoder != null) {
-                encoder.stop();
-                encoder.release();
-            }
-            if(mMuxer!=null) {
-                mMuxer.stop();
-                mMuxer.release();
-                mMuxer = null;
-            }
+//            if (encoder != null) {
+//                encoder.stop();
+//                encoder.release();
+//            }
+//            if(mMuxer!=null) {
+//                mMuxer.stop();
+//                mMuxer.release();
+//                mMuxer = null;
+//            }
             Log.i(TAG, "Largest color delta: " + mLargestColorDelta);
         }
 
