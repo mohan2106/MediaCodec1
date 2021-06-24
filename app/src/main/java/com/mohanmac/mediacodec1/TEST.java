@@ -6,7 +6,10 @@ import android.media.MediaCodecList;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
+import android.os.Build;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -21,6 +24,7 @@ public class TEST {
     private static final String DEBUG_FILE_NAME_BASE = "/sdcard/test.";
     private static final int OUTPUT_VIDEO_COLOR_FORMAT =
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface;
+    private static final int OUTPUT_VIDEO_COLOR_YUV = MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV444Flexible;
 
     // parameters for the encoder
     private static final String MIME_TYPE = "video/avc";    // H.264 Advanced Video Coding
@@ -40,7 +44,11 @@ public class TEST {
 
     private int mLargestColorDelta;
     private boolean mMuxerStarted;
-    private int mTrackIndex;
+    private int mTrackIndex = -1;
+    private MediaMuxer mMuxer = null;
+    boolean videoExtractorDone = false;
+    MediaFormat mOutputFormat;
+
 
     public void testEncodeDecodeVideoFromBufferToBuffer720p(String inputFilePath,String outputFilePath) throws Exception {
         this.outputFilePath = outputFilePath;
@@ -61,7 +69,6 @@ public class TEST {
     private void encodeDecodeVideoFromBuffer(boolean toSurface) throws Exception {
         MediaCodec encoder = null;
         //MediaCodec decoder = null;
-        MediaMuxer mMuxer = null;
         mLargestColorDelta = -1;
         try {
             MediaCodecInfo codecInfo = selectCodec(MIME_TYPE);
@@ -72,7 +79,7 @@ public class TEST {
             }
             if (VERBOSE) Log.d(TAG, "found codec: " + codecInfo.getName());
             int colorFormat = selectColorFormat(codecInfo, MIME_TYPE);
-            if (VERBOSE) Log.d(TAG, "found colorFormat: " + colorFormat);
+            if (VERBOSE) Log.d(TAG, "found colorFormat: " + OUTPUT_VIDEO_COLOR_FORMAT);
             // We avoid the device-specific limitations on width and height by using values that
             // are multiples of 16, which all tested devices seem to be able to handle.
             MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
@@ -83,18 +90,86 @@ public class TEST {
             format.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
             format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
             if (VERBOSE) Log.d(TAG, "format: " + format);
-            // Create a MediaCodec for the desired codec, then configure it as an encoder with
-            // our desired properties.
-            encoder = MediaCodec.createByCodecName(codecInfo.getName());
-            encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-            encoder.start();
+
             // Create a MediaCodec for the decoder, just based on the MIME type.  The various
             // format details will be passed through the csd-0 meta-data later on.
             //decoder = MediaCodec.createDecoderByType(MIME_TYPE);
             mMuxer = new MediaMuxer(outputFilePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
             mTrackIndex = -1;
             mMuxerStarted = false;
-            doEncodeDecodeVideoFromBuffer(encoder, colorFormat, toSurface, mMuxer);
+
+
+            MediaExtractor extractor = new MediaExtractor();
+            extractor.setDataSource(inputFilePath);
+            selectVideoTrackIndex(extractor);
+            // Create a MediaCodec for the desired codec, then configure it as an encoder with
+            // our desired properties.
+            encoder = MediaCodec.createByCodecName(codecInfo.getName());
+
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                encoder.setCallback(new MediaCodec.Callback() {
+                    @Override
+                    public void onInputBufferAvailable(@NonNull MediaCodec codec, int index) {
+                        ByteBuffer inputBuffer = codec.getInputBuffer(index);
+                        // fill inputBuffer with valid data
+                        int size = extractor.readSampleData(inputBuffer, 0);
+                        long presentationTime = extractor.getSampleTime();
+                        if (VERBOSE) {
+                            Log.d(TAG, "video extractor: returned buffer of size " + size);
+                            Log.d(TAG, "video extractor: returned buffer for time " + presentationTime);
+                        }
+                        if (videoExtractorDone) {
+                            if (VERBOSE) Log.d(TAG, "video extractor: EOS");
+//                            codec.queueInputBuffer(
+//                                    index,
+//                                    0,
+//                                    0,
+//                                    0,
+//                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                            codec.signalEndOfInputStream();
+                        }else{
+                            if (size >= 0) {
+                                codec.queueInputBuffer(
+                                        index,
+                                        0,
+                                        size,
+                                        presentationTime,
+                                        extractor.getSampleFlags());
+                            }
+                        }
+                        videoExtractorDone = !extractor.advance();
+                    }
+
+                    @Override
+                    public void onOutputBufferAvailable(@NonNull MediaCodec codec, int index, @NonNull MediaCodec.BufferInfo info) {
+                        ByteBuffer encoderOutputBuffer = codec.getOutputBuffer(index);
+                        if (info.size != 0) {
+                            mMuxer.writeSampleData(
+                                    index, encoderOutputBuffer, info);
+                        }
+                    }
+
+                    @Override
+                    public void onError(@NonNull MediaCodec codec, @NonNull MediaCodec.CodecException e) {
+                        Log.d(TAG,"ERROR: " + e.getMessage());
+                    }
+
+                    @Override
+                    public void onOutputFormatChanged(@NonNull MediaCodec codec, @NonNull MediaFormat format) {
+                        mOutputFormat = format;
+                        if (!mMuxerStarted) {
+                            Log.d(TAG, "muxer: adding video track.");
+                            mTrackIndex = mMuxer.addTrack(format);
+                            mMuxer.start();
+                            mMuxerStarted = true;
+                        }
+                    }
+                });
+            }
+            encoder.configure(mOutputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+            encoder.start();
+            //doEncodeDecodeVideoFromBuffer(encoder, colorFormat, toSurface, mMuxer);
         } finally {
             if (VERBOSE) Log.d(TAG, "releasing codecs");
             if (encoder != null) {
@@ -133,6 +208,15 @@ public class TEST {
         return null;
     }
 
+    private void selectVideoTrackIndex(MediaExtractor extractor) {
+        for (int index = 0; index < extractor.getTrackCount(); ++index) {
+            if (extractor.getTrackFormat(index).getString(MediaFormat.KEY_MIME).equals("video/avc")) {
+                extractor.selectTrack(index);
+                return;
+            }
+        }
+        return;
+    }
     private static int selectColorFormat(MediaCodecInfo codecInfo, String mimeType) {
         MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
         for (int i = 0; i < capabilities.colorFormats.length; i++) {
@@ -210,7 +294,7 @@ public class TEST {
             boolean encoderDone = false;
             boolean outputDone = false;
             int totalDataRead = 0;
-            /*while (!encoderDone) {
+            while (!encoderDone) {
                 if (VERBOSE) Log.d(TAG, "loop");
                 // If we're not done submitting frames, generate a new one and submit it.  By
                 // doing this on every loop we're working to ensure that the encoder always has
@@ -218,7 +302,7 @@ public class TEST {
                 //
                 // We don't really want a timeout here, but sometimes there's a delay opening
                 // the encoder device, so a short timeout can keep us from spinning hard.
-                if (!inputDone) {
+                /*if (!inputDone) {
                     int inputBufIndex = encoder.dequeueInputBuffer(TIMEOUT_USEC);
                     if (VERBOSE) Log.d(TAG, "inputBufIndex=" + inputBufIndex);
                     if (inputBufIndex >= 0) {
@@ -318,42 +402,11 @@ public class TEST {
 //
 //
 //                        }
-                        if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0 && false) {
-                            // Codec config info.  Only expected on first packet.  One way to
-                            // handle this is to manually stuff the data into the MediaFormat
-                            // and pass that to configure().  We do that here to exercise the API.
-                            if (!decoderConfigured) {
-                                MediaFormat format =
-                                        MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
-                                format.setByteBuffer("csd-0", encodedData);
-                                decoder.configure(format, toSurface ? outputSurface.getSurface() : null,
-                                        null, 0);
-                                decoder.start();
-                                decoderInputBuffers = decoder.getInputBuffers();
-                                decoderOutputBuffers = decoder.getOutputBuffers();
-                                decoderConfigured = true;
-                                if (VERBOSE)
-                                    Log.d(TAG, "decoder configured (" + info.size + " bytes)");
-                            }
 
-                        } else {
-                            // Get a decoder input buffer, blocking until it's available.
-                            if (decoderConfigured) {
-                                int inputBufIndex = decoder.dequeueInputBuffer(-1);
-                                ByteBuffer inputBuf = decoderInputBuffers[inputBufIndex];
-                                inputBuf.clear();
-                                inputBuf.put(encodedData);
-                                decoder.queueInputBuffer(inputBufIndex, 0, info.size,
-                                        info.presentationTimeUs, info.flags);
-                                encoderDone = (info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
-                                if (VERBOSE) Log.d(TAG, "passed " + info.size + " bytes to decoder"
-                                        + (encoderDone ? " (EOS)" : ""));
-                            }
-                        }
                         encoder.releaseOutputBuffer(encoderStatus, false);
                     }
-                }
-            }*/
+                }*/
+            }
             if (VERBOSE) Log.d(TAG, "decoded " + checkIndex + " frames at "
                     + mWidth + "x" + mHeight + ": raw=" + rawSize + ", enc=" + encodedSize);
 
